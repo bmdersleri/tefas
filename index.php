@@ -103,6 +103,10 @@ $metric_directions = [
     'sharpe' => 'high', 'sortino' => 'high', 'calmar' => 'high',
     'max_drawdown' => 'low', 'mom_3m' => 'high', 'mom_6m' => 'high', 'mom_12m' => 'high',
     'beta' => 'low', 'dd_current' => 'low',
+    'treynor' => 'high', 'information_ratio' => 'high', 'r_squared' => 'high',
+    'omega' => 'high', 'real_return' => 'high',
+    'skewness' => 'high', 'kurtosis' => 'low',
+    'win_rate' => 'high', 'best_day' => 'high', 'worst_day' => 'high',
 ];
 
 foreach ($metric_directions as $key => $direction) {
@@ -393,6 +397,18 @@ foreach ($metric_directions as $key => $direction) {
                 <span class="lbl">Beta</span>
                 <span class="mval"><?php echo ($m['beta'] ?? null) !== null ? number_format($m['beta'],2) : '—'; ?></span>
             </div>
+            <div class="fc-m-item">
+                <span class="lbl">Omega</span>
+                <span class="mval"><?php echo ($m['omega'] ?? null) !== null ? number_format($m['omega'],2) : '—'; ?></span>
+            </div>
+            <div class="fc-m-item">
+                <span class="lbl">Gerçek Getiri</span>
+                <span class="mval <?php echo (($m['real_return'] ?? null) !== null && $m['real_return'] >= 0 ? 'pos-return' : 'neg-return'); ?>"><?php echo ($m['real_return'] ?? null) !== null ? number_format($m['real_return']*100,2).'%' : '—'; ?></span>
+            </div>
+            <div class="fc-m-item">
+                <span class="lbl">Kazanma</span>
+                <span class="mval"><?php echo ($m['win_rate'] ?? null) !== null ? number_format($m['win_rate'],1).'%' : '—'; ?></span>
+            </div>
         </div>
         <?php endif; ?>
     </div>
@@ -461,9 +477,21 @@ foreach ($metric_directions as $key => $direction) {
             <th class="sortable" data-col="15" data-type="num">6M Getiri (%)</th>
             <th class="sortable" data-col="16" data-type="num">12M Getiri (%)</th>
             <th class="sortable" data-col="17" data-type="num">Beta</th>
-            <th class="sortable" data-col="18" data-type="num">Mevcut DD (%)</th>
-            <th class="sortable" data-col="19" data-type="num">DD Süresi (gün)</th>
-            <th class="sortable" data-col="20" data-type="num">Kurtarma (gün)</th>
+            <th class="sortable" data-col="18" data-type="num">Treynor</th>
+            <th class="sortable" data-col="19" data-type="num">Info Ratio</th>
+            <th class="sortable" data-col="20" data-type="num">R² (%)</th>
+            <th class="sortable" data-col="21" data-type="num">Omega</th>
+            <th class="sortable" data-col="22" data-type="num">Gerçek Getiri (%)</th>
+            <th class="sortable" data-col="23" data-type="num">Çarpıklık</th>
+            <th class="sortable" data-col="24" data-type="num">Basıklık</th>
+            <th class="sortable" data-col="25" data-type="num">Kazanma (%)</th>
+            <th class="sortable" data-col="26" data-type="num">En İyi Gün (%)</th>
+            <th class="sortable" data-col="27" data-type="num">En Kötü Gün (%)</th>
+            <th class="sortable" data-col="28" data-type="num">Kazanma Serisi</th>
+            <th class="sortable" data-col="29" data-type="num">Kaybetme Serisi</th>
+            <th class="sortable" data-col="30" data-type="num">Mevcut DD (%)</th>
+            <th class="sortable" data-col="31" data-type="num">DD Süresi (gün)</th>
+            <th class="sortable" data-col="32" data-type="num">Kurtarma (gün)</th>
         </tr>
         </thead>
         <tbody>
@@ -487,6 +515,18 @@ foreach ($metric_directions as $key => $direction) {
                 <td class="<?php echo metric_class('mom_6m', $m['mom_6m'], $metric_stats); ?>"><?php echo $m['mom_6m'] !== null ? number_format($m['mom_6m'] * 100.0, 2) : '—'; ?></td>
                 <td class="<?php echo metric_class('mom_12m', $m['mom_12m'], $metric_stats); ?>"><?php echo $m['mom_12m'] !== null ? number_format($m['mom_12m'] * 100.0, 2) : '—'; ?></td>
                 <td class="<?php echo metric_class('beta', $m['beta'] ?? null, $metric_stats); ?>"><?php echo ($m['beta'] ?? null) !== null ? number_format($m['beta'], 2) : '—'; ?></td>
+                <td class="<?php echo metric_class('treynor', $m['treynor'] ?? null, $metric_stats); ?>"><?php echo ($m['treynor'] ?? null) !== null ? number_format($m['treynor'], 2) : '—'; ?></td>
+                <td class="<?php echo metric_class('information_ratio', $m['information_ratio'] ?? null, $metric_stats); ?>"><?php echo ($m['information_ratio'] ?? null) !== null ? number_format($m['information_ratio'], 2) : '—'; ?></td>
+                <td class="<?php echo metric_class('r_squared', $m['r_squared'] ?? null, $metric_stats); ?>"><?php echo ($m['r_squared'] ?? null) !== null ? number_format($m['r_squared'], 1) : '—'; ?></td>
+                <td class="<?php echo metric_class('omega', $m['omega'] ?? null, $metric_stats); ?>"><?php echo ($m['omega'] ?? null) !== null ? number_format($m['omega'], 2) : '—'; ?></td>
+                <td class="<?php echo metric_class('real_return', $m['real_return'] ?? null, $metric_stats); ?>"><?php echo ($m['real_return'] ?? null) !== null ? number_format($m['real_return'] * 100.0, 2) : '—'; ?></td>
+                <td class="<?php echo metric_class('skewness', $m['skewness'] ?? null, $metric_stats); ?>"><?php echo ($m['skewness'] ?? null) !== null ? number_format($m['skewness'], 2) : '—'; ?></td>
+                <td class="<?php echo metric_class('kurtosis', $m['kurtosis'] ?? null, $metric_stats); ?>"><?php echo ($m['kurtosis'] ?? null) !== null ? number_format($m['kurtosis'], 2) : '—'; ?></td>
+                <td class="<?php echo metric_class('win_rate', $m['win_rate'] ?? null, $metric_stats); ?>"><?php echo ($m['win_rate'] ?? null) !== null ? number_format($m['win_rate'], 1) : '—'; ?></td>
+                <td class="<?php echo metric_class('best_day', $m['best_day'] ?? null, $metric_stats); ?>"><?php echo ($m['best_day'] ?? null) !== null ? number_format($m['best_day'], 2) : '—'; ?></td>
+                <td class="<?php echo metric_class('worst_day', $m['worst_day'] ?? null, $metric_stats); ?>"><?php echo ($m['worst_day'] ?? null) !== null ? number_format($m['worst_day'], 2) : '—'; ?></td>
+                <td><?php echo ($m['pos_streak'] ?? null) !== null ? $m['pos_streak'] : '—'; ?></td>
+                <td><?php echo ($m['neg_streak'] ?? null) !== null ? $m['neg_streak'] : '—'; ?></td>
                 <td class="<?php echo metric_class('dd_current', $m['dd_current'] ?? null, $metric_stats); ?>"><?php echo ($m['dd_current'] ?? null) !== null ? number_format($m['dd_current'], 2) : '—'; ?></td>
                 <td><?php echo ($m['dd_duration'] ?? null) !== null ? $m['dd_duration'] : '—'; ?></td>
                 <td><?php echo ($m['dd_recovery'] ?? null) !== null ? $m['dd_recovery'] : '—'; ?></td>

@@ -413,3 +413,194 @@ function current_drawdown_pct(array $price_series): ?float
     if ($last_price === null || $peak <= 0) return null;
     return max(0.0, (($peak - $last_price) / $peak) * 100.0);
 }
+
+/**
+ * Getiri dağılımının çarpıklığı (skewness).
+ * Negatif çarpık = sol kuyruk riski daha fazla.
+ */
+function skewness(array $returns): ?float
+{
+    $n = count($returns);
+    if ($n < 3) return null;
+
+    $m = mean($returns);
+    $s = stddev($returns);
+    if ($m === null || $s === null || $s <= 0) return null;
+
+    $sum = 0.0;
+    foreach ($returns as $r) {
+        $z = ($r - $m) / $s;
+        $sum += $z * $z * $z;
+    }
+    return ($n / (($n - 1) * ($n - 2))) * $sum;
+}
+
+/**
+ * Getiri dağılımının basıklığı (excess kurtosis).
+ * Yüksek kurtosis = normal dağılımdan daha kalın kuyruklar, aşırı hareket riski.
+ */
+function kurtosis(array $returns): ?float
+{
+    $n = count($returns);
+    if ($n < 4) return null;
+
+    $m = mean($returns);
+    $s = stddev($returns);
+    if ($m === null || $s === null || $s <= 0) return null;
+
+    $sum = 0.0;
+    foreach ($returns as $r) {
+        $z = ($r - $m) / $s;
+        $sum += $z * $z * $z * $z;
+    }
+    $raw = $sum / $n;
+    // Excess kurtosis: normal dağılımdan fark (normal = 3)
+    return $raw - 3.0;
+}
+
+/**
+ * Omega Ratio: $threshold eşiğinin üzerindeki getirilerin toplamı /
+ * $threshold eşiğinin altındaki kayıpların toplamı.
+ * $threshold günlük risksiz getiri oranı (default: 0).
+ */
+function omega_ratio(array $returns, float $threshold = 0.0): ?float
+{
+    $n = count($returns);
+    if ($n === 0) return null;
+
+    $gains = 0.0;
+    $losses = 0.0;
+    foreach ($returns as $r) {
+        $diff = $r - $threshold;
+        if ($diff > 0) {
+            $gains += $diff;
+        } else {
+            $losses += abs($diff);
+        }
+    }
+
+    if ($losses <= 0) return null; // Hiç kayıp yoksa sonsuz
+    return $gains / $losses;
+}
+
+/**
+ * Information Ratio: fazla getiri / izleme hatası.
+ * Benchmark'a göre ne kadar tutarlı aşıldığını ölçer.
+ */
+function information_ratio(array $fund_returns, array $benchmark_returns): ?float
+{
+    $te = tracking_error($fund_returns, $benchmark_returns);
+    if ($te === null || $te <= 0) return null;
+
+    $common = array_intersect(array_keys($fund_returns), array_keys($benchmark_returns));
+    $excess = [];
+    foreach ($common as $d) {
+        $excess[] = $fund_returns[$d] - $benchmark_returns[$d];
+    }
+
+    $mean_excess = mean($excess);
+    if ($mean_excess === null) return null;
+
+    return $mean_excess / $te;
+}
+
+/**
+ * Tracking Error: benchmark'a göre fazla getirilerin standart sapması.
+ * Düşük = tutarlı, yüksek = değişken aşırı getiri.
+ */
+function tracking_error(array $fund_returns, array $benchmark_returns): ?float
+{
+    $common = array_intersect(array_keys($fund_returns), array_keys($benchmark_returns));
+    $excess = [];
+    foreach ($common as $d) {
+        $excess[] = $fund_returns[$d] - $benchmark_returns[$d];
+    }
+    return stddev($excess);
+}
+
+/**
+ * R-kare (R²): benchmark ile korelasyonun karesi (0-100).
+ * Beta'nın ne kadar anlamlı olduğunu gösterir.
+ * 100 = fon benchmark'u tam takip ediyor.
+ */
+function r_squared(array $fund_returns, array $benchmark_returns): ?float
+{
+    $r = correlation_assoc(
+        array_combine(array_keys($fund_returns), $fund_returns),
+        array_combine(array_keys($benchmark_returns), $benchmark_returns)
+    );
+    if ($r === null) return null;
+    return $r * $r * 100.0;
+}
+
+/**
+ * Treynor Oranı: yıllık getiri / beta.
+ * Sistemsel risk başına getiriyi ölçer.
+ * $risk_free_rate: yıllık risksiz oran (default: %40 — mevduat faizi proxy).
+ */
+function treynor_ratio(?float $annual_return, ?float $fund_beta, float $risk_free_rate = 0.40): ?float
+{
+    if ($annual_return === null || $fund_beta === null || abs($fund_beta) < 1e-9) return null;
+    return ($annual_return - $risk_free_rate) / $fund_beta;
+}
+
+/**
+ * Kazanma oranı: pozitif getiri günlerin yüzdesi (0-100).
+ */
+function win_rate(array $returns): ?float
+{
+    $n = count($returns);
+    if ($n === 0) return null;
+    $wins = count(array_filter($returns, fn(float $r): bool => $r > 0));
+    return ($wins / $n) * 100.0;
+}
+
+/**
+ * Tek gün en yüksek getiri (%).
+ */
+function best_day(array $returns): ?float
+{
+    $n = count($returns);
+    if ($n === 0) return null;
+    return max($returns) * 100.0;
+}
+
+/**
+ * Tek gün en düşük getiri (%).
+ */
+function worst_day(array $returns): ?float
+{
+    $n = count($returns);
+    if ($n === 0) return null;
+    return min($returns) * 100.0;
+}
+
+/**
+ * En uzun kazanma/kaybetme serisi (gün sayısı).
+ * $positive = true ise kazanma serisi, false ise kaybetme serisi.
+ */
+function max_streak(array $returns, bool $positive): int
+{
+    $max_streak = 0;
+    $current = 0;
+    foreach ($returns as $r) {
+        if (($positive && $r > 0) || (!$positive && $r < 0)) {
+            $current++;
+            $max_streak = max($max_streak, $current);
+        } else {
+            $current = 0;
+        }
+    }
+    return $max_streak;
+}
+
+/**
+ * Enflasyona göre düzeltilmiş getiri (yıllık).
+ * $nominal_return: nominal yıllık getiri (ondalık, ör: 0.25 = %25)
+ * $inflation_rate: yıllık enflasyon oranı (ondalık, ör: 0.50 = %50)
+ */
+function real_return(float $nominal_return, float $inflation_rate): ?float
+{
+    if ($inflation_rate <= -1.0) return null;
+    return (1.0 + $nominal_return) / (1.0 + $inflation_rate) - 1.0;
+}

@@ -755,6 +755,39 @@ class FundAnalyzer
 
         $period_return = ($last_price / $base_price - 1.0) * 100.0;
 
+        // Yeni metrikler
+        $skew = skewness($returns_values);
+        $kurt = kurtosis($returns_values);
+        $omega = omega_ratio($returns_values);
+        $win_pct = win_rate($returns_values);
+        $best = best_day($returns_values);
+        $worst = worst_day($returns_values);
+        $pos_streak = max_streak($returns_values, true);
+        $neg_streak = max_streak($returns_values, false);
+
+        // Benchmark bazlı metrikler
+        $info_ratio = null;
+        $treynor = null;
+        $te = null;
+        $r2 = null;
+        $real_ret = null;
+
+        if (count($this->daily_returns_by_fund) > 1) {
+            $avg_benchmark = $this->calculateBenchmarkReturns();
+            if (!empty($avg_benchmark)) {
+                $info_ratio = information_ratio($daily_returns, $avg_benchmark);
+                $te = tracking_error($daily_returns, $avg_benchmark);
+                $r2 = r_squared($daily_returns, $avg_benchmark);
+            }
+        }
+
+        $treynor = treynor_ratio($annual_return, $beta_val);
+
+        // Enflasyona göre düzeltme (yıllık ~%40 TÜFE proxy)
+        if ($annual_return !== null) {
+            $real_ret = real_return($annual_return, 0.40);
+        }
+
         return [
             'start_date'         => $firstDate,
             'end_date'           => $lastDate,
@@ -781,6 +814,19 @@ class FundAnalyzer
             'dd_recovery'        => $dd_recovery,
             'dd_current'         => $dd_current,
             'beta'               => $beta_val,
+            'skewness'           => $skew,
+            'kurtosis'           => $kurt,
+            'omega'              => $omega,
+            'information_ratio'  => $info_ratio,
+            'treynor'            => $treynor,
+            'tracking_error'     => $te,
+            'r_squared'          => $r2,
+            'win_rate'           => $win_pct,
+            'best_day'           => $best,
+            'worst_day'          => $worst,
+            'pos_streak'         => $pos_streak,
+            'neg_streak'         => $neg_streak,
+            'real_return'        => $real_ret,
             'last_flow_date'     => $flow_data['last_flow_date'],
             'latest_net_flow'    => $flow_data['latest_net_flow'],
             'latest_net_flow_pct'=> $flow_data['latest_net_flow_pct'],
